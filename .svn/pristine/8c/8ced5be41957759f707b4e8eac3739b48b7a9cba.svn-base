@@ -1,0 +1,75 @@
+﻿/************************************************************
+ * File: Form1.cs                                           *
+ * Author: Dillon Allan                                     *
+ * Description: Main form file for Lab 01.                  *
+ ***********************************************************/
+using System.Drawing;
+using System.Threading;
+using System.Windows.Forms;
+using GDIDrawer;
+
+// results: 90/100
+// no GDIDrawer push to SVN (-5)
+// programmer's block for main solution file should contain project name + desc (-5)
+// place all comments above code, unless you have a really strong preference to do otherwise
+// don't make utility files as a form, unless it's a dialog - use a regular source file instead
+// have tags match comments (tags are bad?) :
+//            visited,    // highlight me!
+//            unvisited   // don't highlight me, please...
+// single locking object is nice for keeping things straight, but there are places
+//  where an additional object for just managing the drawer may have been more efficient
+// there are some interesting buried single thread locking cases here as well -
+//  TRendering, for example, locks your locking semaphore, but then it is relocked in
+//  RenderBlocks (a method called in TRendering). Since the low-level access is managed
+//  in RenderBlocks, I would think you don't need the lock in TRendering (or at least it could be
+//  managed differently). Also, locking for all but 1ms could have performance implications.
+// what is the logic behind the decl' of a stack size of 99999999?
+// in the construct:
+/*for (int x = 0; x<_canvas.ScaledWidth; x++)   
+            {
+                for (int y = 0; y<_canvas.ScaledHeight; y++)
+                {
+                    lock (Block._oLock) 
+                    */
+// there is no pause on execution. Is it better to take the overhead of XxY locks, or just
+//  lock once for the entire operation? Again, use of a separate semaphore might be better with
+//  a single lock (maybe).
+// recursion did not have to consider diagonals
+// in general, code looks good.
+
+
+namespace CMPE2800DAllanLab01
+{
+    public partial class Form1 : Form
+    {
+        // members
+        Thread _tRendering, _tMouseClicks, _tMouseMovement; // three background threads
+        Color[,] _aBlockColors; // array of block colors
+        static CDrawer _canvas; // drawer for blocks
+
+        public Form1()
+        {
+            InitializeComponent();
+            
+            GetNewCanvas();     // init canvas object
+            GetNewColorArray(); // start off with the primary color
+
+            // Initialize threads with their looping methods
+            // (clicks and movement threads have arbitrary stack sizes
+            // for preventing stack overflow.)
+            _tRendering = new Thread(TRendering);
+            _tMouseClicks = new Thread(TMouseClicks, 99999999);
+            _tMouseMovement = new Thread(TMouseMovement, 99999999); 
+
+            // all threads must run in the background
+            _tRendering.IsBackground = true;
+            _tMouseClicks.IsBackground = true;
+            _tMouseMovement.IsBackground = true;
+
+            // start all threads.
+            _tRendering.Start();
+            _tMouseClicks.Start();
+            _tMouseMovement.Start();
+        }
+    }
+}
